@@ -1,0 +1,57 @@
+{
+    "EasyR4Config":{
+
+        //Configure basic functions of the system
+        "SystemCfg": {
+            "SelfTrigDelay": 1, // Sets a delay time between Self-Trigger events, value range is 1 to 128 in the power of 2
+            "CL": 1, // Coupling mode of Baseband amplifier, 0: DC Coupling, 1: AC Coupling
+            "LOG": 0, // Sets scaling type of magnitude data, 0: Log MAG, 1: Linear MAG
+            "FMT": 0, // Select the data output format, 0: TL mm distance, 1: TL cm distance
+            "LED": 0, // Enables the onboard RGB LED, 0: OFF, 1: 1st target
+            "Protocal": 2, // Protocol type for data output, 0: WebGUI, 1: TSV, 2: BIN
+            "AGC": 1, // Enables Auto Gain Control
+            "Gain": 0, // Manual gain setting, 0-5 dB
+            "SER1": 1, // Enables UART connection to the pin header
+            "SER2": 1, // Enables USB connection on the EasyR4 USB port
+            "ERR": 0, // Enables the Error Information frame
+            "ST": 0, // Enables the Status Information frame
+            "TL": 0, // Enables the Target List frame
+            "C": 0, // Enables the CFAR frame
+            "R": 0, // Enables the Magnitude / Range frame
+            "P": 0, // Enables the Phase frame
+            "CPL": 0, // Enables the Complex FFT data frame
+            "RAW": 1, // Enables the ADC raw data (I/Q) frame
+            "SLF": 1, // Switch Trigger Mode, 0: enternal trig mode, 1: standard mode
+            "PRE": 0, // Enable pre-trigger (applies only in External Trigger Mode)
+
+        },
+
+        // Configure front end base-frequency
+        "RadarFrontendCfg":{
+            "Base Frequency": 480000, // Base Frequency = n * 250 KHz, for 120GHz the value is 480000
+        },
+
+        // Configure the bandwidth of the frequency ramp
+        "PLLCfg":{
+            "Bandwidth": 2500, // int16, bandwidth = n * 2 MHz, for 5GHz the value is 2500
+        },
+
+        // Configure baseband and processing related parameters
+        "BasebandCfg": {
+            "WIN": 0, // Enables Windowing on the samples before performing the FFT
+            "FIR": 0, // Enables the FIR filter
+            "DC": 0, // Enables digital de-trending and static offset compensation
+            "CFAR": 0, // Select the CFAR operator, 0: CA-CFAR, 1: GO-CFAR, 2: SO-CFAR
+            "CFAR Thres": 0, // CFAR threshold value added to average of the CFAR operator; value range is 0 to 30 in step size of 2
+            "CFAR Size": 0, // Number of cells left and right of the CFAR guard interval, value range is 0 to 15
+            "CRAR Grd": 0, // Number of guard cells left and right of the cell under test, value range is 0 to 3
+            "Average N": 0, // Selects how many FFTs are averaged, value range is 0 to 3
+            "FFT Size": 32, // Number of FFT points, value range is 32 to 2048 in the power of 2
+            "Downsampling": 0, // Down sampling factor, value range is 0 to 64 in the power of 2
+            "Ramps": 1, // Number of ramps used for each measurement, value range is 1 to 128 in the power of 2
+            "Samples": 128, // Number of samples used for each measurement, value range is 32 to 2048 in the power of 2
+            "ADC ClkDiv": 0, // Select the sampling frequency, 0: 1.8 Msps, 1: 1 Msps, 2: 675 ksps, 3: 397 ksps, 4: 281.25 ksps, 5: 218 ksps, 6: 173 ksps, 7: 55 ksps
+        },
+
+    }
+}
