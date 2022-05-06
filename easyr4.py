@@ -12,7 +12,7 @@ easyR4.wave_cfg = {
     'gain': 0,          # dB
     'ramp_time': 0,     # us
     'samples': 0,       # 
-    'max_range': 0,     # m
+    'max_range': 0,     # mm
     'setting_bw': 0,    # MHz
     'real_bw':0,        # MHz
     'update_rate':0,    # ms
