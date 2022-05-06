@@ -1,24 +1,22 @@
 # -*- encoding: utf-8 -*-
 """
 @File    : easyr4_config.py
-@Project : silicon_radar_easyr4
+@Project : py_easyR4
 @Time    : 2022/5/4 20:00
 @Author  : Jason Liu
 @Email   : ltxvanessa4980@gmail.com
 @Software: PyCharm
 """
-import serial
-import numpy as np
-import time
-import os
-import sys
-from matplotlib import pyplot as plt
-import json5
-import threading
-from scipy import signal
-import pyqtgraph as pg
 import queue
-from pyqtgraph.Qt import QtCore, QtWidgets
+import threading
+import time
+
+import json5
+import numpy as np
+import pyqtgraph as pg
+import serial
+from pyqtgraph.Qt import QtWidgets
+from scipy import signal
 
 EASYR4_PORT = '/dev/tty.usbserial-32310'
 BAUDRATE = 1 * 1000 * 1000
@@ -43,23 +41,24 @@ class EASYR4_IDENTIFIER_CODE():
     GET_VERSION_CODE = 'V'
     END_CODE = '\r\n'
 
+
 class easyR4():
-    def __init__(self, com_port , profile='config_profile.jsonc'):
+    def __init__(self, com_port, profile='config_profile.jsonc'):
         self.com_port = com_port
         self.profile = profile
         self.CLIPort = com_port
         self.wave_cfg = {
-            'gain': 0,          # dB
-            'ramp_time': 0,     # us
-            'samples': 0,       #
-            'max_range': 0,     # m
-            'setting_bw': 0,    # MHz
-            'real_bw':0,        # MHz
-            'update_rate':0,    # ms
-            'base_freq':0,      # GHz
-            'adc_clkdiv':0,     #
-            'down_samp':0,      #
-            'ramps':0,          #
+            'gain': 0,  # dB
+            'ramp_time': 0,  # us
+            'samples': 0,  #
+            'max_range': 0,  # m
+            'setting_bw': 0,  # MHz
+            'real_bw': 0,  # MHz
+            'update_rate': 0,  # ms
+            'base_freq': 0,  # GHz
+            'adc_clkdiv': 0,  #
+            'down_samp': 0,  #
+            'ramps': 0,  #
         }
         self.config_cmd = []
 
@@ -76,13 +75,13 @@ class easyR4():
                 'X') + \
             format(0, 'X') + \
             format((system_cfg_profile['Protocal'] << 2) + (system_cfg_profile['AGC'] << 1) + (
-                        system_cfg_profile['Gain'] >> 2), 'X') + \
+                    system_cfg_profile['Gain'] >> 2), 'X') + \
             format(((system_cfg_profile['Gain'] & 3) << 2) + (system_cfg_profile['SER1'] << 1) + (
-            system_cfg_profile['SER2']), 'X') + \
+                system_cfg_profile['SER2']), 'X') + \
             format((system_cfg_profile['ERR'] << 3) + (system_cfg_profile['ST'] << 2) + (
-                        system_cfg_profile['TL'] << 1) + (system_cfg_profile['C']), 'X') + \
+                    system_cfg_profile['TL'] << 1) + (system_cfg_profile['C']), 'X') + \
             format((system_cfg_profile['R'] << 3) + (system_cfg_profile['P'] << 2) + (
-                        system_cfg_profile['CPL'] << 1) + (system_cfg_profile['RAW']), 'X') + \
+                    system_cfg_profile['CPL'] << 1) + (system_cfg_profile['RAW']), 'X') + \
             format((system_cfg_profile['SLF'] << 1) + (system_cfg_profile['PRE']), 'X')
 
         system_cfg = EASYR4_IDENTIFIER_CODE.BEGINNING_CODE + \
@@ -90,7 +89,6 @@ class easyR4():
                      system_cfg + \
                      EASYR4_IDENTIFIER_CODE.END_CODE
         self.config_cmd.append(system_cfg)
-
 
         radar_frontend_cfg_profile = profile['RadarFrontendCfg']
         self.wave_cfg['base_freq'] = radar_frontend_cfg_profile['Base Frequency'] * 250 / 10e6
@@ -117,7 +115,6 @@ class easyR4():
         self.wave_cfg['down_samp'] = baseband_cfg_profile['Downsampling']
         self.wave_cfg['ramps'] = baseband_cfg_profile['Ramps']
 
-
         baseband_cfg_profile['CFAR Thres'] = baseband_cfg_profile['CFAR Thres'] // 2
         baseband_cfg_profile['FFT Size'] = int(np.log2(baseband_cfg_profile['FFT Size']).astype(int)) - 5
         if not baseband_cfg_profile['Downsampling'] == 0:
@@ -128,12 +125,12 @@ class easyR4():
 
         baseband_cfg = \
             format((baseband_cfg_profile['WIN'] << 3) + (baseband_cfg_profile['FIR'] << 2) + (
-                        baseband_cfg_profile['DC'] << 1) + (baseband_cfg_profile['CFAR'] >> 1), 'X') + \
+                    baseband_cfg_profile['DC'] << 1) + (baseband_cfg_profile['CFAR'] >> 1), 'X') + \
             format(((baseband_cfg_profile['CFAR'] & 1) << 3) + (baseband_cfg_profile['CFAR Thres'] >> 1), 'X') + \
             format(((baseband_cfg_profile['CFAR Thres'] & 1) << 3) + (baseband_cfg_profile['CFAR Size'] >> 1),
                    'X') + \
             format(((baseband_cfg_profile['CFAR Size'] & 1) << 3) + (baseband_cfg_profile['CRAR Grd'] << 1) + (
-                        baseband_cfg_profile['Average N'] >> 1), 'X') + \
+                    baseband_cfg_profile['Average N'] >> 1), 'X') + \
             format(((baseband_cfg_profile['Average N'] & 1) << 3) + (baseband_cfg_profile['FFT Size']), 'X') + \
             format((baseband_cfg_profile['Downsampling'] << 1) + (baseband_cfg_profile['Ramps'] >> 2), 'X') + \
             format(((baseband_cfg_profile['Ramps'] & 3) << 2) + (baseband_cfg_profile['Samples'] >> 1), 'X') + \
@@ -145,12 +142,10 @@ class easyR4():
                        EASYR4_IDENTIFIER_CODE.END_CODE
         self.config_cmd.append(baseband_cfg)
 
-
     def send_config(self):
         for cmd in self.config_cmd:
             self.CLIPort.write(cmd.encode())
             time.sleep(0.01)
-
 
     def get_system_status(self):
 
@@ -175,7 +170,7 @@ class easyR4():
         self.com_port.flushInput()
         time.sleep(1)
         bb = list(self.com_port.read_all())
-        for i in range(len(bb)-23):
+        for i in range(len(bb) - 23):
             if bb[i] == 170 and bb[i + 1] == 170 and bb[i + 2] == 187 and bb[i + 3] == 204:
                 if bb[i + 4] == ord('U'):
                     size = bb[i + 5] * 256 + bb[i + 6]
@@ -194,22 +189,19 @@ class easyR4():
                     self.wave_cfg['real_bw'] = real_bw
                     self.wave_cfg['update_rate'] = time_diff / 100
 
-
                     print('Gain:', gain, 'dB')
                     print('Ramp Time:', ramp_time, 'us')
                     print('Max Range:', max_range, 'mm')
                     print('Real BW:', real_bw, 'MHz')
-                    print('Updata Rate:', time_diff/100, 'ms')
+                    print('Updata Rate:', time_diff / 100, 'ms')
                 break
 
         self.CLIPort.flushInput()
         self.send_config()
 
-
     def sensor_stop(self):
         cmd = '!S110A3002\r\n'
         self.CLIPort.write(cmd.encode())
-
 
 
 class serial_read_thread(threading.Thread):
@@ -248,9 +240,10 @@ class serial_read_thread(threading.Thread):
                 if len(self.bb) >= self.frame_len:
 
                     for i in range(len(self.bb) - self.frame_len):
-                        if self.bb[i] == 170 and self.bb[i+1] == 170 and self.bb[i+2] == 187 and self.bb[i+3] == 204:
+                        if self.bb[i] == 170 and self.bb[i + 1] == 170 and self.bb[i + 2] == 187 and self.bb[
+                            i + 3] == 204:
 
-                            if self.first_frame == True and self.bb[i+4] == ord('I'):
+                            if self.first_frame == True and self.bb[i + 4] == ord('I'):
 
                                 adc_data = self.bb[i + 9:i + self.frame_len - 2]
                                 adc_data = np.array(adc_data, dtype=self.dt).view(self.adc_dt)
@@ -266,10 +259,10 @@ class serial_read_thread(threading.Thread):
                                 adc_data = np.array(adc_data, dtype=self.dt).view(self.adc_dt)
                                 adc_data = adc_data.astype(np.int16) - 2048
 
-                                if self.bb[i+4] == ord('I'):
+                                if self.bb[i + 4] == ord('I'):
                                     self.adc_frame[0, :] = adc_data
 
-                                elif self.bb[i+4] == ord('Q'):
+                                elif self.bb[i + 4] == ord('Q'):
                                     self.adc_frame[1, :] = adc_data
                                     self.data_queue.put(self.adc_frame)
 
@@ -282,11 +275,9 @@ class serial_read_thread(threading.Thread):
 
             time.sleep(0.005)
 
-
     def start_capture(self):
         self.com_port.flushInput()
         self.run_flag = True
-
 
     def close(self):
         self.run_flag = False
@@ -305,8 +296,8 @@ def update():
         view.plot(x=range_axis[10:256], y=fft_abs[10:256], clear=True, pen=pg.mkPen('g', width=3))
         # print((time.time() - start)*1e3)
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     data_queue = queue.Queue()
 
     range_axis = np.linspace(0, 2745, 256)
@@ -334,7 +325,6 @@ if __name__ == '__main__':
     radar.get_system_status()
     # radar.send_config()
 
-
     rp_read = serial_read_thread(com_port=CLIPort, samples=radar.wave_cfg['samples'], queue=data_queue)
     rp_read.start()
 
@@ -344,9 +334,3 @@ if __name__ == '__main__':
 
     pg.exec()
     rp_read.close()
-
-
-
-
-
-

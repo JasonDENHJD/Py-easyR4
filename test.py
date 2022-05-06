@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 """
 @File    : test.py
-@Project : silicon_radar_easyr4
+@Project : py_easyR4
 @Time    : 2022/5/4 18:59
 @Author  : Jason Liu
 @Email   : ltxvanessa4980@gmail.com
