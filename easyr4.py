@@ -26,6 +26,7 @@ import numpy as np
 import time
 import json5
 import threading
+import serial
 
 class EASYR4_IDENTIFIER_CODE():
     BEGINNING_CODE = '!'
@@ -45,11 +46,10 @@ class EASYR4_IDENTIFIER_CODE():
     END_CODE = '\r\n'
 
 class easyR4():
-    def __init__(self, com_port , profile='config_profile.jsonc'):
-        self.com_port = com_port
+    def __init__(self, profile='config_profile.jsonc'):
+        self.com_port = None
         self.profile = profile
-        self.CLIPort = com_port
-        self.wave_cfg = {
+        self.radar_cfg = {
             'gain': 0,          # dB
             'ramp_time': 0,     # us
             'samples': 0,       #
@@ -61,14 +61,20 @@ class easyR4():
             'adc_clkdiv':0,     #
             'down_samp':0,      #
             'ramps':0,          #
+
+            'save_format':0,    #
+            'save_path':0,
+            'cap_time':0,
+
         }
         self.config_cmd = []
 
     def get_config(self):
         profile = open(self.profile)
-        profile = json5.load(profile)['EasyR4Config']
+        profile = json5.load(profile)
+        easyr4_cfg = profile['EasyR4Config']
 
-        system_cfg_profile = profile['SystemCfg']
+        system_cfg_profile = easyr4_cfg['SystemCfg']
         system_cfg_profile['SelfTrigDelay'] = int(np.log2(system_cfg_profile['SelfTrigDelay']).astype(int))
         system_cfg = \
             format((system_cfg_profile['SelfTrigDelay'] << 1) + system_cfg_profile['CL'], 'X') + \
@@ -93,8 +99,8 @@ class easyR4():
         self.config_cmd.append(system_cfg)
 
 
-        radar_frontend_cfg_profile = profile['RadarFrontendCfg']
-        self.wave_cfg['base_freq'] = radar_frontend_cfg_profile['Base Frequency'] * 250 / 10e6
+        radar_frontend_cfg_profile = easyr4_cfg['RadarFrontendCfg']
+        self.radar_cfg['base_freq'] = radar_frontend_cfg_profile['Base Frequency'] * 250 / 10e6
 
         radar_frontend_cfg = format(radar_frontend_cfg_profile['Base Frequency'], 'X').zfill(8)
         radar_frontend_cfg = EASYR4_IDENTIFIER_CODE.BEGINNING_CODE + \
@@ -103,8 +109,8 @@ class easyR4():
                              EASYR4_IDENTIFIER_CODE.END_CODE
         self.config_cmd.append(radar_frontend_cfg)
 
-        pll_cfg_profile = profile['PLLCfg']
-        self.wave_cfg['setting_bw'] = pll_cfg_profile['Bandwidth'] * 2
+        pll_cfg_profile = easyr4_cfg['PLLCfg']
+        self.radar_cfg['setting_bw'] = pll_cfg_profile['Bandwidth'] * 2
         pll_cfg = format(pll_cfg_profile['Bandwidth'], 'X').zfill(8)
         pll_cfg = EASYR4_IDENTIFIER_CODE.BEGINNING_CODE + \
                   EASYR4_IDENTIFIER_CODE.PLL_CFG_CODE + \
@@ -112,11 +118,11 @@ class easyR4():
                   EASYR4_IDENTIFIER_CODE.END_CODE
         self.config_cmd.append(pll_cfg)
 
-        baseband_cfg_profile = profile['BasebandCfg']
-        self.wave_cfg['samples'] = baseband_cfg_profile['Samples']
-        self.wave_cfg['adc_clkdiv'] = baseband_cfg_profile['ADC ClkDiv']
-        self.wave_cfg['down_samp'] = baseband_cfg_profile['Downsampling']
-        self.wave_cfg['ramps'] = baseband_cfg_profile['Ramps']
+        baseband_cfg_profile = easyr4_cfg['BasebandCfg']
+        self.radar_cfg['samples'] = baseband_cfg_profile['Samples']
+        self.radar_cfg['adc_clkdiv'] = baseband_cfg_profile['ADC ClkDiv']
+        self.radar_cfg['down_samp'] = baseband_cfg_profile['Downsampling']
+        self.radar_cfg['ramps'] = baseband_cfg_profile['Ramps']
 
 
         baseband_cfg_profile['CFAR Thres'] = baseband_cfg_profile['CFAR Thres'] // 2
@@ -146,10 +152,18 @@ class easyR4():
                        EASYR4_IDENTIFIER_CODE.END_CODE
         self.config_cmd.append(baseband_cfg)
 
+        gui_config = profile['GUIConfig']
+        com_port_name = gui_config['COM Port']
+        com_port_baud = gui_config['COM Baud']
+        self.com_port = serial.Serial(com_port_name, baudrate=com_port_baud, timeout=0.001)
+
+        self.radar_cfg['cap_time'] = gui_config['Cap Time']
+        self.radar_cfg['save_path'] = gui_config['Save Path']
+        self.radar_cfg['save_format'] = gui_config['Save Format']
 
     def send_config(self):
         for cmd in self.config_cmd:
-            self.CLIPort.write(cmd.encode())
+            self.com_port.write(cmd.encode())
             time.sleep(0.01)
 
 
@@ -157,13 +171,13 @@ class easyR4():
 
         self.get_config()
 
-        self.CLIPort.write(self.config_cmd[1].encode())
+        self.com_port.write(self.config_cmd[1].encode())
         time.sleep(0.01)
 
-        self.CLIPort.write(self.config_cmd[2].encode())
+        self.com_port.write(self.config_cmd[2].encode())
         time.sleep(0.01)
 
-        self.CLIPort.write(self.config_cmd[3].encode())
+        self.com_port.write(self.config_cmd[3].encode())
         time.sleep(0.01)
 
         system_cfg = self.config_cmd[0]
@@ -172,7 +186,7 @@ class easyR4():
         get_status_code[-4] = '0'
         get_status_code = ''.join(get_status_code)
 
-        self.CLIPort.write(get_status_code.encode())
+        self.com_port.write(get_status_code.encode())
         self.com_port.flushInput()
         time.sleep(1)
         bb = list(self.com_port.read_all())
@@ -189,11 +203,11 @@ class easyR4():
                     real_bw = bb[i + 17] * 256 + bb[i + 18]
                     time_diff = bb[i + 19] * 256 + bb[i + 20]
 
-                    self.wave_cfg['gain'] = gain
-                    self.wave_cfg['ramp_time'] = ramp_time
-                    self.wave_cfg['max_range'] = max_range
-                    self.wave_cfg['real_bw'] = real_bw
-                    self.wave_cfg['update_rate'] = time_diff / 100
+                    self.radar_cfg['gain'] = gain
+                    self.radar_cfg['ramp_time'] = ramp_time
+                    self.radar_cfg['max_range'] = max_range
+                    self.radar_cfg['real_bw'] = real_bw
+                    self.radar_cfg['update_rate'] = time_diff / 100
 
 
                     print('Gain:', gain, 'dB')
@@ -203,13 +217,13 @@ class easyR4():
                     print('Updata Rate:', time_diff/100, 'ms')
                 break
 
-        self.CLIPort.flushInput()
+        self.com_port.flushInput()
         self.send_config()
 
 
     def sensor_stop(self):
         cmd = '!S110A3002\r\n'
-        self.CLIPort.write(cmd.encode())
+        self.com_port.write(cmd.encode())
 
 
 

@@ -14,9 +14,10 @@ from PyQt6.QtWidgets import QWidget
 import numpy as np
 from scipy import signal
 from .ui_main_window import UI_Main_Window
+from scipy.io import savemat
 
 class QT_Main(QWidget):
-    def __init__(self, capture_event, capture_cnt, adc_data_queue, wave_config):
+    def __init__(self, capture_cnt, adc_data_queue, radar_config):
         super(QT_Main, self).__init__()
 
         self.ui = UI_Main_Window()
@@ -31,8 +32,9 @@ class QT_Main(QWidget):
         self.plot_hrrp_view.setLabel('bottom', 'HRRP')
         self.plot_hrrp_view.showGrid(x=True, y=True)
 
-        self.capture_event = capture_event
-        self.capture_cnt = capture_cnt
+        self.capture_cnt = radar_config['cap_time'] * 1e3 // radar_config['update_rate']
+        self.save_path = radar_config['save_path']
+        self.save_format = radar_config['save_format']
 
         self.data_queue = adc_data_queue
 
@@ -43,8 +45,8 @@ class QT_Main(QWidget):
         self.rp_length = 0
         self.rp_data = []
         self.ptr5 = 0
-        self.wave_config = wave_config
-        self.win = signal.windows.hann(self.wave_config['samples'])
+        self.radar_cfg = radar_config
+        self.win = signal.windows.hann(self.radar_cfg['samples'])
 
         self.capture = False
         self.cap_now = 0
@@ -58,22 +60,24 @@ class QT_Main(QWidget):
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateData)
-        self.timer.start(10)
+        self.timer.start(1)
 
 
     def Display_Setting(self):
-        self.label1.setText("Gain       : " + str(self.wave_config['gain']) + 'dB' + "\n" +
-                            "Ramp Time  : " + str(self.wave_config['ramp_time']) + 'us'  + "\n" +
-                            "Samples    : " + str(self.wave_config['samples']) + "\n" +
-                            "Max Range  : " + str(self.wave_config['max_range']) + 'mm'  + "\n" +
-                            "Setting BW : " + str(self.wave_config['setting_bw']) + 'MHz'  + "\n" +
-                            "Real BW    : " + str(self.wave_config['real_bw']) + 'MHz'  + "\n" +
-                            "Update Rate: " + str(self.wave_config['update_rate']) + 'us'  + "\n" +
-                            "Base Freq  : " + str(self.wave_config['base_freq']) + 'GHz'  + "\n" +
-                            "ADC CLKDIV : " + str(self.wave_config['adc_clkdiv']) + "\n" +
-                            "Downsamp   : " + str(self.wave_config['down_samp']) + "\n" +
-                            "Ramps      : " + str(self.wave_config['ramps']) + "\n")
-
+        self.label1.setText("Gain       : " + str(self.radar_cfg['gain']) + 'dB' + "\n" +
+                            "Ramp Time  : " + str(self.radar_cfg['ramp_time']) + 'us'  + "\n" +
+                            "Samples    : " + str(self.radar_cfg['samples']) + "\n" +
+                            "Max Range  : " + str(self.radar_cfg['max_range']) + 'mm'  + "\n" +
+                            "Setting BW : " + str(self.radar_cfg['setting_bw']) + 'MHz'  + "\n" +
+                            "Real BW    : " + str(self.radar_cfg['real_bw']) + 'MHz'  + "\n" +
+                            "Update Rate: " + str(self.radar_cfg['update_rate']) + 'ms'  + "\n" +
+                            "Base Freq  : " + str(self.radar_cfg['base_freq']) + 'GHz'  + "\n" +
+                            "ADC CLKDIV : " + str(self.radar_cfg['adc_clkdiv']) + "\n" +
+                            "Downsamp   : " + str(self.radar_cfg['down_samp']) + "\n" +
+                            "Ramps      : " + str(self.radar_cfg['ramps']) + "\n" +
+                            "Cap Time   : " + str(self.radar_cfg['cap_time']) + "\n" +
+                            "Save Path  : " + str(self.radar_cfg['save_path']) + "\n"
+                            )
 
     def updateData(self):
         if self.data_queue.qsize() >= 1:
@@ -95,6 +99,9 @@ class QT_Main(QWidget):
                 if self.cap_now == self.capture_cnt:
                     self.capture = False
                     self.capbtn.setEnabled(True)
-                    file_name = time.strftime('%Y%m%d_%H%M%S', time.localtime(time.time()))
-                    np.save('cap_data/' + file_name, self.cap_temp)
+                    file_name = self.save_path + time.strftime('%Y%m%d_%H%M%S', time.localtime(time.time()))
+                    if self.save_format == 0:
+                        np.save(file_name, self.cap_temp)
+                    elif self.save_format == 1:
+                        savemat(file_name + '.mat', {'adc_data': self.cap_temp})
                     self.cap_temp = []

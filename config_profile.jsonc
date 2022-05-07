@@ -1,6 +1,5 @@
 {
     "EasyR4Config":{
-
         //Configure basic functions of the system
         "SystemCfg": {
             "SelfTrigDelay": 1, // Sets a delay time between Self-Trigger events, value range is 1 to 128 in the power of 2
@@ -25,17 +24,14 @@
             "PRE": 0, // Enable pre-trigger (applies only in External Trigger Mode)
 
         },
-
         // Configure front end base-frequency
         "RadarFrontendCfg":{
             "Base Frequency": 480000, // Base Frequency = n * 250 KHz, for 120GHz the value is 480000
         },
-
         // Configure the bandwidth of the frequency ramp
         "PLLCfg":{
             "Bandwidth": 2500, // int16, bandwidth = n * 2 MHz, for 5GHz the value is 2500
         },
-
         // Configure baseband and processing related parameters
         "BasebandCfg": {
             "WIN": 0, // Enables Windowing on the samples before performing the FFT
@@ -52,6 +48,13 @@
             "Samples": 128, // Number of samples used for each measurement, value range is 32 to 2048 in the power of 2
             "ADC ClkDiv": 0, // Select the sampling frequency, 0: 1.8 Msps, 1: 1 Msps, 2: 675 ksps, 3: 397 ksps, 4: 281.25 ksps, 5: 218 ksps, 6: 173 ksps, 7: 55 ksps
         },
+    },
 
+    "GUIConfig": {
+        "COM Port": "/dev/tty.usbserial-32310",
+        "COM Baud": 1000000,
+        "Cap Time": 5,
+        "Save Path": "cap_data/",
+        "Save Format": 1, // cap data save format, 0: numpy, 1: matlab
     }
 }
